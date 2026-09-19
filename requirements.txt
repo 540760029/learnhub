@@ -1,0 +1,7 @@
+# 服务端
+fastapi>=0.110
+uvicorn[standard]>=0.27
+sqlalchemy>=2.0
+httpx>=0.26                 # 调用 OpenAI 兼容接口；TestClient 也依赖它
+cryptography>=42.0          # API Key 对称加密
+python-multipart>=0.0.9     # 资料文件上传（multipart/form-data）

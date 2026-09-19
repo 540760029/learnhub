@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LearnHub · 课程学习与 AI 出题平台</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b1120'/><text y='72' x='50' text-anchor='middle' font-size='56' fill='%2338bdf8' font-family='sans-serif'>L</text></svg>">
+</head>
+<body>
+
+<!-- ========== 登录 / 注册 ========== -->
+<div id="authView" class="auth-wrap">
+  <div class="auth-bg"></div>
+  <div class="auth-card">
+    <div class="brand-lg"><span class="logo">L</span> LearnHub</div>
+    <p class="sub">课程学习 · 作业布置 · AI 智能出题</p>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="login">登录</button>
+      <button class="tab" data-tab="register">注册</button>
+    </div>
+
+    <!-- 登录 -->
+    <form id="loginForm" class="tabpane active" autocomplete="on">
+      <label>邮箱<input name="email" type="email" required placeholder="teacher@demo.edu"></label>
+      <label>密码<input name="password" type="password" required placeholder="demo1234"></label>
+      <button class="btn primary block" type="submit">登 录</button>
+      <div class="hint">
+        演示账号 —— 教师：<code>teacher@demo.edu</code>　学生：<code>student@demo.edu</code><br>
+        密码统一为 <code>demo1234</code>
+      </div>
+    </form>
+
+    <!-- 注册 -->
+    <form id="registerForm" class="tabpane" autocomplete="on">
+      <div class="row2">
+        <label>姓名<input name="name" required placeholder="李小凡"></label>
+        <label>身份
+          <select name="role">
+            <option value="student">学生</option>
+            <option value="teacher">教师</option>
+          </select>
+        </label>
+      </div>
+      <label>邮箱<input name="email" type="email" required placeholder="you@example.com"></label>
+      <label>密码<input name="password" type="password" required minlength="6" placeholder="至少 6 位"></label>
+      <div class="row2">
+        <label>学校/学院<input name="school" placeholder="山西农业大学软件学院"></label>
+        <label>学号/工号<input name="student_no" placeholder="选填"></label>
+      </div>
+      <button class="btn primary block" type="submit">注 册</button>
+    </form>
+
+    <div id="authMsg" class="msg"></div>
+  </div>
+</div>
+
+<!-- ========== 主应用 ========== -->
+<div id="appView" class="app hidden">
+  <aside class="sidebar">
+    <div class="brand"><span class="logo">L</span> LearnHub</div>
+    <nav id="nav">
+      <a href="#/dashboard" data-nav="dashboard">🏠 我的课程</a>
+      <a href="#/attempts" data-nav="attempts" class="student-only">📊 我的练习记录</a>
+      <a href="#/admin" data-nav="admin" class="admin-only">🛡️ 平台管理</a>
+      <a href="#/settings" data-nav="settings">⚙️ 设置</a>
+    </nav>
+    <div class="me">
+      <div class="avatar" id="meAvatar">李</div>
+      <div>
+        <div class="mname" id="meName">—</div>
+        <div class="mrole" id="meRole">—</div>
+      </div>
+    </div>
+    <button class="btn ghost block" id="logoutBtn">退出登录</button>
+  </aside>
+
+  <main class="main">
+    <div id="content" class="content"></div>
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="modal" class="modal hidden"><div class="modal-box" id="modalBox"></div></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
