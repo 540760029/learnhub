@@ -33,6 +33,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+import config  # noqa: F401  —— 必须先加载 .env，再读下面的环境变量
 import llm
 from db import (Announcement, Assignment, Attempt, AiUsage, Course, KnowledgePoint,
                 Question, QuizSet, SessionLocal, Submission, User, WeakStat,

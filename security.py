@@ -19,6 +19,7 @@ import os
 import secrets
 import time
 
+import config  # noqa: F401  —— 必须先加载 .env，再读下面的环境变量
 from cryptography.fernet import Fernet
 
 # ------------------------------------------------------------------ 基础参数

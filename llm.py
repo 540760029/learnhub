@@ -15,6 +15,8 @@ from typing import Any
 
 import httpx
 
+import config  # noqa: F401  —— 必须先加载 .env，再读下面的环境变量
+
 # ------------------------------------------------------------------ 提供商注册表
 PROVIDERS: dict[str, dict[str, str]] = {
     "deepseek": {"label": "DeepSeek", "base_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"},

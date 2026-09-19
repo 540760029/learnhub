@@ -3,43 +3,65 @@
 面向高校课程的在线学习平台：**教师**发布课程/知识点/作业/试题并查看学情，
 **学生**加入课程、交作业、做模拟题看解析，并可让学生用 AI 按自己的**薄弱知识点**自动出题。
 
-> 当前进度：**P1 本地可运行 Demo（已完成并通过 55 项端到端测试）**
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 > 技术选型已按「可平滑迁移到 Postgres / 云端」来写，见文末《上线路线》。
 
 ---
 
 ## 一、快速开始
 
-```bat
-cd learnhub
+### 1. 安装依赖
 
-:: 依赖已随仓库放在 ..\_libs，直接指过去即可
-set PYTHONPATH=..\_libs
+```bash
+python -m venv .venv
+# Windows:  .venv\Scripts\activate
+# macOS/Linux:  source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-:: 启动（首次会自动建表 + 写入演示数据）
-python -m uvicorn app:app --reload --port 8000
+### 2. 生成配置（推荐）
+
+```bash
+python setup_env.py
+```
+
+它会**自动生成一个高强度随机主密钥**写入 `.env`，并引导你设置数据库地址、
+每日额度、是否写入演示数据，最后打印一份自检结果。也可以手动复制 `.env.example` 为 `.env`。
+
+> ⚠️ **不要跳过这一步**。`.env` 里的 `LEARNHUB_SECRET` 是公开的默认值，
+> 任何拿到它的人都能**伪造管理员登录令牌**、并**解密数据库里所有 API Key**。
+> 生产环境必须换成随机值（`setup_env.py` 已自动处理）。
+
+### 3. 启动
+
+```bash
+uvicorn app:app --reload --port 8000
 ```
 
 浏览器打开 **http://127.0.0.1:8000**
 
 ### 演示账号
 
-| 身份 | 邮箱 | 密码 | 说明 |
-|---|---|---|---|
-| 管理员 | `admin@demo.edu` | `demo1234` | 平台管理员，AI 出题**不限次数** |
-| 教师 | `teacher@demo.edu` | `demo1234` | 张明 |
-| 学生 | `student@demo.edu` | `demo1234` | 李小凡 |
+首次启动且 `LEARNHUB_SEED=1` 时会写入以下账号（密码均为 `demo1234`）：
+
+| 身份 | 邮箱 | 说明 |
+|---|---|---|
+| 管理员 | `admin@demo.edu` | 平台管理员，AI 出题**不限次数** |
+| 教师 | `teacher@demo.edu` | 张明 |
+| 学生 | `student@demo.edu` | 李小凡 |
 
 课程邀请码：**`DEMO01`**（学生用它加入课程）
 
+> ⚠️ 正式上线请设 `LEARNHUB_SEED=0`；若已写入，务必改掉演示账号密码或直接删除。
+
 ### 跑一遍自动化测试
 
-```bat
-set PYTHONPATH=..\_libs
-python smoke_test.py      :: 143 项端到端断言
-python feature_test.py    :: 69 项（答题小结 / 绿框 / 解析必填 / 难度规范化）
-python ui_probe.py        :: 无头浏览器验证提交前校验（需服务已在 8000 端口运行）
-python upload_test.py     :: 文件上传 / AI 整理知识点（含真实 .docx 构造）
+```bash
+python smoke_test.py      # 143 项端到端断言
+python feature_test.py    # 69 项（答题小结 / 绿框 / 解析必填 / 难度规范化）
+python upload_test.py     # 文件上传 / AI 整理知识点（含真实 .docx 构造）
+python ui_probe.py        # 无头浏览器验证提交前校验（需服务已在 8000 端口运行）
 ```
 
 覆盖 143 项断言：认证、多教师隔离、越权拦截、作业提交与评分、
@@ -166,60 +188,133 @@ learnhub/
 `users`（教师+学生同表，`role` 区分）· `courses` · `enrollments`（选课）
 · `knowledge_points` · `assignments` · `submissions` · `quiz_sets` · `questions`
 · `attempts`（答题记录）· `ai_usage`（每日额度计数）· `weak_stats`（薄弱点统计）
-· `announcements`
+· `announcements` · `settings`（平台级配置，含加密的平台 AI Key）
 
 ---
 
 ## 四、权限模型（多教师多租户）
 
-| 操作 | 课程负责人 | 协助教师 | 选课学生 | 其他人 |
-|---|---|---|---|---|
-| 看课程内容 | ✅ | ✅ | ✅ | ❌ 403 |
-| 发知识点/作业/试题 | ✅ | ✅ | ❌ 403 | ❌ |
-| 看学情分析/学生名单 | ✅ | ✅ | ❌ 403 | ❌ |
-| 交作业 / 答题 | ❌ | ❌ | ✅ | ❌ |
-| 看别人的答题记录 | — | — | ❌ 403 | ❌ |
+| 操作 | 管理员 | 课程负责人 | 协助教师 | 选课学生 | 其他人 |
+|---|---|---|---|---|---|
+| 看课程内容 | ✅ | ✅ | ✅ | ✅ | ❌ 403 |
+| 发知识点/作业/试题 | ✅ | ✅ | ✅ | ❌ 403 | ❌ |
+| 看学情分析/学生名单 | ✅ | ✅ | ✅ | ❌ 403 | ❌ |
+| 交作业 / 答题 | ❌ | ❌ | ❌ | ✅ | ❌ |
+| 看别人的答题记录 | ✅ | ❌ | ❌ | ❌ 403 | ❌ |
+| 平台后台（用户/课程/平台 Key） | ✅ | ❌ 403 | ❌ 403 | ❌ 403 | ❌ |
 
 隔离依据是 `courses.teacher_id`（课程属主）与 `enrollments`（选课关系），
 不依赖任何"只有一个老师/一个班"的假设，所以能直接支撑多教师 + 上千学生。
 
 ---
 
-## 五、配置项（`.env.example`）
+## 五、配置项
+
+配置来源优先级：**系统环境变量 > `.env` 文件 > 代码内默认值**
+（`.env` 由 `config.py` 读取，容器部署时用环境变量即可覆盖）。
 
 | 变量 | 说明 |
 |---|---|
-| `LEARNHUB_SECRET` | 会话签名 + Key 加密主密钥，**生产必须改** |
-| `LEARNHUB_DB_URL` | 数据库地址，默认本地 SQLite |
-| `LEARNHUB_PLATFORM_API_KEY` | 平台兜底 Key，留空则走离线模拟题 |
+| `LEARNHUB_SECRET` | **必改**。会话签名 + API Key 加密主密钥，公开默认值等于裸奔 |
+| `LEARNHUB_DB_URL` | 数据库地址，留空 = 本地 SQLite |
+| `LEARNHUB_PLATFORM_API_KEY` | 平台 Key 的容器初始化兜底；正常应在后台「🔑 平台 AI Key」上传 |
 | `LEARNHUB_DEFAULT_PROVIDER` | 默认服务商，默认 `deepseek` |
-| `LEARNHUB_DAILY_AI_LIMIT` | 非自带 Key 的每日出题套数，默认 3 |
-| `LEARNHUB_SEED` | 是否写入演示数据 |
+| `LEARNHUB_DAILY_AI_LIMIT` | 教师/学生每日出题套数，默认 3（管理员可后台改） |
+| `LEARNHUB_SEED` | 是否写入演示账号与课程，**正式环境设 0** |
+| `LEARNHUB_TOKEN_TTL` | 会话有效期（秒），默认 7 天 |
 
 支持的 AI 服务商（学生可在「设置」里自选）：
 **DeepSeek**（默认）· OpenAI · 通义千问 · 智谱 GLM · Kimi · 自定义 OpenAI 兼容端点。
 
 ---
 
-## 六、上线路线（后续阶段）
+## 六、部署到生产
 
-| 阶段 | 内容 | 关键改动 |
-|---|---|---|
-| ✅ **P1** | 本地 Demo | FastAPI + SQLite |
-| **P2** | 数据上云 | 换 `LEARNHUB_DB_URL` 为 Postgres（Supabase 免费档）；模型用了通用类型，基本不用改写 |
-| **P3** | 前端部署 | 静态文件推 GitHub Pages；API 部署到 Render/Railway/Fly，或改用 Supabase Edge Function |
-| **P4** | 规模与安全 | Supabase RLS 兜底数据隔离、Redis 限流、对象存储放作业附件、操作审计日志 |
-| **P5** | 教学增强 | 班级/学期体系、题库组卷、自动批改主观题、知识点掌握度雷达图 |
+### 1. 生成配置
 
-> ⚠️ **安全提醒**：课程内容与学生数据**绝不能**放进 GitHub Pages 仓库（公开可下载）。
-> 前端只放空壳页面，真实数据全部通过登录后的 API 获取 —— 本 Demo 已是这个结构。
+```bash
+python setup_env.py              # 交互式，自动生成随机主密钥
+python setup_env.py --no-seed    # 正式环境：不要演示数据
+```
+
+### 2. 换成 Postgres（推荐）
+
+数据层全部使用通用类型，改一行即可：
+
+```bash
+LEARNHUB_DB_URL=postgresql+psycopg://user:pass@host:5432/learnhub
+pip install "psycopg[binary]"
+```
+
+启动时 `init_db()` 会自动建表；**老库升级也会自动补列**（`db.py` 里的 `_migrate()`），
+不用手工执行 SQL。
+
+### 3. 启动服务
+
+```bash
+# 开发
+uvicorn app:app --reload --port 8000
+
+# 生产（多进程 + 反向代理）
+uvicorn app:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+建议前面挂 Nginx/Caddy 做 TLS 与静态缓存。
+
+### 4. 上线检查清单
+
+- [ ] `LEARNHUB_SECRET` 已换成随机值，且**已备份**（丢了则用户 API Key 无法解密）
+- [ ] `LEARNHUB_SEED=0`；若曾写入演示数据，已改密码或删除 `*@demo.edu`
+- [ ] 数据库已换成 Postgres，并配置了定期备份
+- [ ] 平台 AI Key 由管理员登录后台「🔑 平台 AI Key」上传（会自动加密存库）
+- [ ] 确认 `data/`、`.env` 未被提交到任何公开仓库
+- [ ] 已经用 `python smoke_test.py` 在目标环境跑过一遍
+
+### 5. 环境变量示例（容器 / 云平台）
+
+```yaml
+environment:
+  LEARNHUB_SECRET: "<48 字节随机串>"
+  LEARNHUB_DB_URL: "postgresql+psycopg://user:pass@db:5432/learnhub"
+  LEARNHUB_SEED: "0"
+  LEARNHUB_DAILY_AI_LIMIT: "3"
+```
 
 ---
 
-## 七、已知取舍（Demo 阶段）
+## 七、上线路线
+
+| 阶段 | 内容 | 状态 |
+|---|---|---|
+| **P1** | 本地可运行 Demo（FastAPI + SQLite） | ✅ 已完成 |
+| **P2** | 数据上云（`LEARNHUB_DB_URL` 换 Postgres，模型通用无需改写） | 待做 |
+| **P3** | 前端 + API 分离部署（静态前端 + 容器化 API） | 待做 |
+| **P4** | 规模与安全（RLS 兜底、Redis 限流、对象存储放附件、审计日志） | 待做 |
+| **P5** | 教学增强（班级/学期体系、题库组卷、主观题自动批改、掌握度雷达图） | 待做 |
+
+> ⚠️ **安全提醒**：课程内容与学生数据**绝不能**放进静态托管仓库（公开可下载）。
+> 前端只放空壳页面，真实数据全部通过登录后的 API 获取 —— 本项目已是这个结构。
+
+---
+
+## 八、已知取舍
 
 - 会话令牌用标准库 HMAC 自签名（JWT 的极简等价物），上线可无缝换成 PyJWT
 - 额度按 UTC 自然日计算，未做"跨时区按用户本地日历日"处理
+- 「没做完不允许提交」是**前端拦截**，后端仍接受部分作答（便于强制收卷/教师补录）
 - 主观题（`short`）目前只做参考答案展示，未接自动批改，需要教师人工评分
 - 附件上传未实现（预留了 `submission.attachment_url` 字段），当前用文本提交
 - 无 WebSocket 实时通知，学生需刷新才能看到新作业
+
+---
+
+## 九、许可证
+
+本项目采用 [MIT License](LICENSE) 发布。
+
+```
+Copyright (c) 2026 李小凡 (Xiaofan Li)
+```
+
+你可以自由使用、修改、分发（含商用），只需保留版权声明与许可证文本。
+

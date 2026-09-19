@@ -12,6 +12,8 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 
+import config  # noqa: F401  —— 必须先加载 .env，再读下面的环境变量
+
 from sqlalchemy import (JSON, Boolean, Column, DateTime, Float, ForeignKey,
                         Integer, String, Table, Text, UniqueConstraint,
                         create_engine)
@@ -22,7 +24,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 DB_PATH = os.path.join(DATA_DIR, "learnhub.db")
-DB_URL = os.environ.get("LEARNHUB_DB_URL", f"sqlite:///{DB_PATH}")
+# 注意：.env 里写了 LEARNHUB_DB_URL= 但留空时，os.environ.get 会拿到空串，
+# 直接丢给 create_engine 会报 "Could not parse SQLAlchemy URL"。
+# 所以这里把「空值」等同于「没配置」，统一回落到本地 SQLite。
+DB_URL = (os.environ.get("LEARNHUB_DB_URL") or "").strip() or f"sqlite:///{DB_PATH}"
 
 engine = create_engine(
     DB_URL,
